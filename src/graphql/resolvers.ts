@@ -5,6 +5,9 @@ import ApartmentOwner from '../models/ApartmentOwner';
 import Payment from '../models/Payment';
 import Building from '../models/Building';
 
+// Validates 'month' in 'YYYY-MM' format (e.g., 2024-01 to 2024-12)
+const monthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+
 export const resolvers = {
   DateTime: {
     __serialize(value: any) {
@@ -111,14 +114,45 @@ export const resolvers = {
       return !!result;
     },
 
+
     // Payment mutations
-    createPayment: async (_: any, { input }: { input: any }): Promise<IPayment> => {
-      const payment = new Payment(input);
+    createPayment: async (_: any, { input }: { input: any }) => {
+      const { month, ...rest } = input;
+
+      if (!monthRegex.test(month)) {
+        throw new Error('Invalid month format. Expected YYYY-MM.');
+      }
+
+      const payment = new Payment({
+        ...rest,
+        month,
+        paymentDate: new Date(), // force current date
+      });
+
       return await payment.save();
     },
 
     updatePayment: async (_: any, { id, input }: { id: string; input: any }): Promise<IPayment | null> => {
-      return await Payment.findByIdAndUpdate(id, input, { new: true, runValidators: true });
+      const updatedInput = { ...input };
+
+      // Prevent manual modification of paymentDate
+      if ('paymentDate' in updatedInput) {
+        delete updatedInput.paymentDate;
+      }
+
+      // Validate the month format (must be YYYY-MM)
+      if ('month' in updatedInput) {
+        const monthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+        if (!monthRegex.test(updatedInput.month)) {
+          throw new Error('Invalid month format. Expected YYYY-MM.');
+        }
+      }
+
+      // Perform the update with validation
+      return await Payment.findByIdAndUpdate(id, updatedInput, {
+        new: true, // return the updated document
+        runValidators: true, // ensure Mongoose schema validation is applied
+      });
     },
 
     deletePayment: async (_: any, { id }: { id: string }): Promise<boolean> => {
