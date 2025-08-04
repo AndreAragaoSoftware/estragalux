@@ -33,6 +33,7 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
 
   mongo-express:
     image: mongo-express
