@@ -110,3 +110,11 @@ Durante o desafio, a parte que exigiu mais dedicação e aprendizagem foi a prep
 No entanto, encarei isso como uma oportunidade de aprendizagem. Estudei a documentação oficial, analisei exemplos e testei diferentes abordagens até conseguir construir uma imagem funcional e que permitisse rodar toda a aplicação com sucesso. Também corrigi pequenos ajustes nos scripts de build e dependências para garantir que o ambiente estivesse replicável em qualquer máquina com Docker.
 
 Essa foi uma etapa que consumiu bastante tempo, mas que considero essencial para demonstrar meu comprometimento e responsabilidade em entregar um projeto pronto para execução. Acredito que esse tipo de esforço reflete bem meu perfil como profissional: resiliente, autodidata e focado em entregar soluções funcionais mesmo diante de barreiras técnicas.
+
+### Organização das branches
+
+No início do projeto, utilizei branches específicas para separar as funcionalidades (`feat/payment-validation`, `chore/docker-setup`, etc.), seguindo boas práticas de versionamento.
+
+No entanto, durante o desenvolvimento, identifiquei conflitos e incompatibilidades que estavam a impactar o funcionamento da aplicação dentro do ambiente Docker. Para garantir a entrega dentro do prazo e com o projeto funcional, decidi consolidar o restante do desenvolvimento diretamente na branch `main`.
+
+Essa decisão foi tomada com foco na estabilidade e conclusão do teste, mas mantive o histórico de commits e o uso do Git de forma transparente para demonstrar o processo de trabalho.
