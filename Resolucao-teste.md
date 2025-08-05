@@ -58,6 +58,13 @@ Essas validações estão implementadas diretamente nos componentes do formulár
 
 Desta forma, combinando validações no frontend e backend, assegurei maior robustez e usabilidade da aplicação.
 
+### 🔍 Considerações sobre Datas no Frontend
+
+Durante os testes, verifiquei que os campos `createdAt` e `updatedAt` são fornecidos diretamente pela base de dados, através do schema Mongoose com `timestamps: true`. 
+
+Como esses campos não dependem do input do utilizador, não foi necessário implementar validações no frontend.
+
+
 
 ## Resultado
 
@@ -66,6 +73,10 @@ Essas mudanças asseguram que:
 - Apenas meses no formato correto são aceitos.
 - A data de pagamento reflete corretamente a data da criação do registo.
 - A data de pagamento não pode ser manipulada posteriormente.
+
+<br>
+<hr>
+<br>
 
 ## 🏢 Implementação da Funcionalidade: Filtro por Prédio
 

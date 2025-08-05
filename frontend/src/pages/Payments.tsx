@@ -335,7 +335,7 @@ const Payments: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this test?')) {
+    if (window.confirm('Are you sure you want to delete this payment?')) {
       try {
         await deletePayment({
           variables: { id },
