@@ -1,3 +1,4 @@
+// IMPORTAÇÕES
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import {
@@ -34,34 +35,25 @@ import {
 } from '@mui/icons-material';
 import { gql } from '@apollo/client';
 
+// FORMATADOR DE DATA
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Not set';
-  
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      console.error('Invalid date string:', dateString);
-      return 'Invalid date';
-    }
-    
-    // Adjust for timezone offset and format
-    const adjustedDate = new Date(
-      date.getTime() - date.getTimezoneOffset() * 60000
-    );
-    
+    const adjustedDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return adjustedDate.toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
-  } catch (error) {
-    console.error('Date parsing error:', error);
+  } catch {
     return 'Invalid date';
   }
 };
 
+// GRAPHQL
 const GET_APARTMENT_OWNERS = gql`
   query GetApartmentOwners {
     apartmentOwners {
@@ -121,6 +113,7 @@ const DELETE_APARTMENT_OWNER = gql`
   }
 `;
 
+// TIPAGENS
 interface Building {
   id: string;
   name: string;
@@ -146,6 +139,7 @@ interface ApartmentOwnerFormData {
   phoneNumber: string;
 }
 
+// COMPONENTE
 const ApartmentOwners: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingOwner, setEditingOwner] = useState<ApartmentOwner | null>(null);
@@ -156,6 +150,8 @@ const ApartmentOwners: React.FC = () => {
     buildingId: '',
     phoneNumber: '',
   });
+
+  const [selectedBuildingId, setSelectedBuildingId] = useState('');
 
   const { loading, error, data, refetch } = useQuery(GET_APARTMENT_OWNERS);
   const { data: buildingsData } = useQuery(GET_BUILDINGS);
@@ -201,18 +197,9 @@ const ApartmentOwners: React.FC = () => {
   const handleSubmit = async () => {
     try {
       if (editingOwner) {
-        await updateOwner({
-          variables: {
-            id: editingOwner.id,
-            input: formData,
-          },
-        });
+        await updateOwner({ variables: { id: editingOwner.id, input: formData } });
       } else {
-        await createOwner({
-          variables: {
-            input: formData,
-          },
-        });
+        await createOwner({ variables: { input: formData } });
       }
       refetch();
       handleCloseDialog();
@@ -224,9 +211,7 @@ const ApartmentOwners: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this apartment owner?')) {
       try {
-        await deleteOwner({
-          variables: { id },
-        });
+        await deleteOwner({ variables: { id } });
         refetch();
       } catch (error) {
         console.error('Error deleting apartment owner:', error);
@@ -243,11 +228,7 @@ const ApartmentOwners: React.FC = () => {
   }
 
   if (error) {
-    return (
-      <Alert severity="error">
-        Error loading apartment owners: {error.message}
-      </Alert>
-    );
+    return <Alert severity="error">Error loading apartment owners: {error.message}</Alert>;
   }
 
   return (
@@ -263,105 +244,88 @@ const ApartmentOwners: React.FC = () => {
         </Button>
       </Box>
 
-      <Grid container spacing={3}>
-        {data?.apartmentOwners.map((owner: ApartmentOwner) => (
-          <Grid item xs={12} sm={6} md={4} key={owner.id}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {owner.name}
-                </Typography>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <EmailIcon fontSize="small" sx={{ mr: 1 }} />
-                  <Typography variant="body2" color="textSecondary">
-                    {owner.email}
-                  </Typography>
-                </Box>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <HomeIcon fontSize="small" sx={{ mr: 1 }} />
-                  <Typography variant="body2" color="textSecondary">
-                    Apartment {owner.apartmentNumber}
-                  </Typography>
-                </Box>
-                {owner.building && (
-                  <Box display="flex" alignItems="center" mb={1}>
-                    <ApartmentIcon fontSize="small" sx={{ mr: 1 }} />
-                    <Typography variant="body2" color="textSecondary">
-                      {owner.building.name}
-                    </Typography>
-                  </Box>
-                )}
-                {owner.phoneNumber && (
-                  <Box display="flex" alignItems="center" mb={1}>
-                    <PhoneIcon fontSize="small" sx={{ mr: 1 }} />
-                    <Typography variant="body2" color="textSecondary">
-                      {owner.phoneNumber}
-                    </Typography>
-                  </Box>
-                )}
-                <Typography variant="caption" color="textSecondary">
-                  Created: {formatDate(owner.createdAt)}
-                </Typography>
-              </CardContent>
-              <CardActions>
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpenDialog(owner)}
-                >
-                  <EditIcon />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => handleDelete(owner.id)}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {/* FILTRO POR PRÉDIO */}
+      <FormControl fullWidth sx={{ maxWidth: 300, mb: 3 }}>
+        <InputLabel>Filter by Building</InputLabel>
+        <Select
+          value={selectedBuildingId}
+          label="Filter by Building"
+          onChange={(e) => setSelectedBuildingId(e.target.value)}
+        >
+          <MenuItem value="">All Buildings</MenuItem>
+          {buildingsData?.buildings.map((building: Building) => (
+            <MenuItem key={building.id} value={building.id}>
+              {building.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
+      {/* LISTAGEM */}
+      <Grid container spacing={3}>
+        {data?.apartmentOwners
+          .filter((owner: ApartmentOwner) =>
+            selectedBuildingId ? owner.building?.id === selectedBuildingId : true
+          )
+          .map((owner: ApartmentOwner) => (
+            <Grid item xs={12} sm={6} md={4} key={owner.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>{owner.name}</Typography>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <EmailIcon fontSize="small" sx={{ mr: 1 }} />
+                    <Typography variant="body2" color="textSecondary">{owner.email}</Typography>
+                  </Box>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <HomeIcon fontSize="small" sx={{ mr: 1 }} />
+                    <Typography variant="body2" color="textSecondary">Apartment {owner.apartmentNumber}</Typography>
+                  </Box>
+                  {owner.building && (
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <ApartmentIcon fontSize="small" sx={{ mr: 1 }} />
+                      <Typography variant="body2" color="textSecondary">{owner.building.name}</Typography>
+                    </Box>
+                  )}
+                  {owner.phoneNumber && (
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <PhoneIcon fontSize="small" sx={{ mr: 1 }} />
+                      <Typography variant="body2" color="textSecondary">{owner.phoneNumber}</Typography>
+                    </Box>
+                  )}
+                  <Typography variant="caption" color="textSecondary">
+                    Created: {formatDate(owner.createdAt)}
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <IconButton size="small" onClick={() => handleOpenDialog(owner)}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton size="small" color="error" onClick={() => handleDelete(owner.id)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+      </Grid>
+      
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingOwner ? 'Edit Apartment Owner' : 'Add New Apartment Owner'}
-        </DialogTitle>
+        <DialogTitle>{editingOwner ? 'Edit Apartment Owner' : 'Add New Apartment Owner'}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+              <TextField fullWidth label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
+              <TextField fullWidth label="Email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Apartment Number"
-                value={formData.apartmentNumber}
-                onChange={(e) => setFormData({ ...formData, apartmentNumber: e.target.value })}
-              />
+              <TextField fullWidth label="Apartment Number" value={formData.apartmentNumber} onChange={(e) => setFormData({ ...formData, apartmentNumber: e.target.value })} />
             </Grid>
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Building</InputLabel>
-                <Select
-                  value={formData.buildingId}
-                  label="Building"
-                  onChange={(e: SelectChangeEvent) => setFormData({ ...formData, buildingId: e.target.value })}
-                >
+                <Select value={formData.buildingId} label="Building" onChange={(e: SelectChangeEvent) => setFormData({ ...formData, buildingId: e.target.value })}>
                   <MenuItem value="">
                     <em>No building assigned</em>
                   </MenuItem>
@@ -374,12 +338,7 @@ const ApartmentOwners: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Phone Number"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-              />
+              <TextField fullWidth label="Phone Number" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} />
             </Grid>
           </Grid>
         </DialogContent>
@@ -394,4 +353,4 @@ const ApartmentOwners: React.FC = () => {
   );
 };
 
-export default ApartmentOwners; 
+export default ApartmentOwners;
