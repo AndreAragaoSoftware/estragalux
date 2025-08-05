@@ -4,6 +4,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+
 # Build
 build/
 dist/
@@ -24,3 +25,15 @@ docker-volume/
 *.swp
 .idea/
 .vscode/
+
+# MongoDB data (caso montado volume local)
+data/
+db/
+initdb.d/
+docker-entrypoint-initdb.d/
+
+# Arquivos temporários ou runtime
+*.pid
+*.sock
+*.db
+/tmp/
