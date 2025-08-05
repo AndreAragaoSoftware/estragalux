@@ -158,19 +158,18 @@ const PaymentStatusChip: React.FC<{ status: string }> = ({ status }) => {
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Not set';
-  
+
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
       console.error('Invalid date string:', dateString);
       return 'Invalid date';
     }
-    
-    // Adjust for timezone offset and format
+
     const adjustedDate = new Date(
       date.getTime() - date.getTimezoneOffset() * 60000
     );
-    
+
     return adjustedDate.toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
@@ -187,6 +186,8 @@ const formatDate = (dateString: string | null | undefined): string => {
 const Payments: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [formData, setFormData] = useState<PaymentFormData>({
     apartmentOwnerId: '',
     amount: '',
@@ -200,6 +201,10 @@ const Payments: React.FC = () => {
   const [createPayment] = useMutation(CREATE_PAYMENT);
   const [updatePayment] = useMutation(UPDATE_PAYMENT);
   const [deletePayment] = useMutation(DELETE_PAYMENT);
+
+  const isValidMonthFormat = (month: string): boolean => {
+    return /^\d{4}-(0[1-9]|1[0-2])$/.test(month);
+  };
 
   const handleOpenDialog = (payment?: Payment) => {
     if (payment) {
@@ -221,6 +226,8 @@ const Payments: React.FC = () => {
         status: 'pending',
       });
     }
+    setFormError(null);
+    setShowErrorAlert(false);
     setOpenDialog(true);
   };
 
@@ -234,65 +241,101 @@ const Payments: React.FC = () => {
       description: '',
       status: 'pending',
     });
+    setFormError(null);
+    setShowErrorAlert(false);
   };
 
   const handleSubmit = async () => {
+    const { apartmentOwnerId, amount, month, description, status } = formData;
+
+    // Resetar erros
+    setFormError(null);
+    setShowErrorAlert(false);
+
+    // Validar campos obrigatórios
+    const errors: string[] = [];
+
+    if (!editingPayment && !apartmentOwnerId) {
+      errors.push('Please select the apartment owner');
+    }
+
+    if (!amount || isNaN(parseFloat(amount))) {
+      errors.push('Invalid payment amount');
+    }
+
+    if (!month || !isValidMonthFormat(month)) {
+      errors.push('Invalid month (use format YYYY-MM)');
+    }
+
+    if (!description.trim()) {
+      errors.push('Description is required');
+    }
+
+    if (!status) {
+      errors.push('Status is required');
+    }
+
+    // Se houver erros, mostrar alerta
+    if (errors.length > 0) {
+      setFormError(errors.join('\n'));
+      setShowErrorAlert(true);
+      return;
+    }
+
     try {
+      const parsedAmount = parseFloat(amount);
+
       if (editingPayment) {
-        // FIXED: Removed apartmentOwnerId from update mutation
-        console.log('Updating payment with input:', {
-          id: editingPayment.id,
-          input: {
-            amount: parseFloat(formData.amount),
-            month: formData.month,
-            description: formData.description,
-            status: formData.status,
-          },
-        });
-        
         await updatePayment({
           variables: {
             id: editingPayment.id,
-            input: {
-              amount: parseFloat(formData.amount),
-              month: formData.month,
-              description: formData.description,
-              status: formData.status,
-            },
+            input: { amount: parsedAmount, month, description, status },
           },
         });
       } else {
-        console.log('Creating payment with input:', {
-          input: {
-            apartmentOwnerId: formData.apartmentOwnerId,
-            amount: parseFloat(formData.amount),
-            month: formData.month,
-            description: formData.description,
-            status: formData.status,
-          },
-        });
-        
         await createPayment({
           variables: {
-            input: {
-              apartmentOwnerId: formData.apartmentOwnerId,
-              amount: parseFloat(formData.amount),
-              month: formData.month,
-              description: formData.description,
-              status: formData.status,
-            },
+            input: { apartmentOwnerId, amount: parsedAmount, month, description, status },
           },
         });
       }
+
       refetch();
       handleCloseDialog();
-    } catch (error) {
-      console.error('Error saving payment:', error);
+    } catch (error: any) {
+      console.error('Erro ao salvar pagamento:', error);
+
+      // Tratamento dos erros do GraphQL
+      const errorMessages = [];
+
+      // 1. Pegamos os erros específicos do GraphQL
+      if (error.graphQLErrors) {
+        error.graphQLErrors.forEach((err: any) => {
+          // Exemplo: "Invalid month format. Expected YYYY-MM"
+          errorMessages.push(err.message);
+        });
+      }
+
+      // 2. Tratamos erros de rede
+      if (error.networkError) {
+        errorMessages.push('Erro de conexão com o servidor');
+      }
+
+      // 3. Mensagem genérica se não identificarmos o erro
+      if (errorMessages.length === 0) {
+        errorMessages.push('Ocorreu um erro ao salvar o pagamento');
+      }
+
+      // Juntamos todas as mensagens e mostramos no alerta
+      setFormError(errorMessages.join('\n'));
+
+      window.alert('Testando o alert')
+      setShowErrorAlert(true);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this payment?')) {
+    if (window.confirm('Are you sure you want to delete this test?')) {
       try {
         await deletePayment({
           variables: { id },
@@ -346,6 +389,12 @@ const Payments: React.FC = () => {
         </Button>
       </Box>
 
+      {data?.payments?.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          No payments found.
+        </Alert>
+      )}
+
       <Grid container spacing={3}>
         {data?.payments.map((payment: Payment) => (
           <Grid item xs={12} sm={6} md={4} key={payment.id}>
@@ -357,34 +406,34 @@ const Payments: React.FC = () => {
                   </Typography>
                   <PaymentStatusChip status={payment.status} />
                 </Box>
-                
+
                 <Box display="flex" alignItems="center" mb={1}>
                   <PersonIcon fontSize="small" sx={{ mr: 1 }} />
                   <Typography variant="body2" color="textSecondary">
                     {payment.apartmentOwner.name} (Apt {payment.apartmentOwner.apartmentNumber})
                   </Typography>
                 </Box>
-                
+
                 <Box display="flex" alignItems="center" mb={1}>
                   <CalendarIcon fontSize="small" sx={{ mr: 1 }} />
                   <Typography variant="body2" color="textSecondary">
                     {payment.month}
                   </Typography>
                 </Box>
-                
+
                 <Box display="flex" alignItems="center" mb={1}>
                   <CalendarIcon fontSize="small" sx={{ mr: 1 }} />
                   <Typography variant="body2" color="textSecondary">
                     Payment Date: {formatDate(payment.paymentDate)}
                   </Typography>
                 </Box>
-                
+
                 {payment.description && (
                   <Typography variant="body2" color="textSecondary" mb={1}>
                     {payment.description}
                   </Typography>
                 )}
-                
+
                 <Typography variant="caption" color="textSecondary">
                   Created: {formatDate(payment.createdAt)}
                 </Typography>
@@ -417,14 +466,39 @@ const Payments: React.FC = () => {
           {editingPayment ? 'Edit Payment' : 'Add New Payment'}
         </DialogTitle>
         <DialogContent>
+          {/* Validation Error Alert */}
+          {showErrorAlert && formError && (
+            <Alert
+              severity="error"
+              sx={{
+                mb: 2,
+                '& .MuiAlert-message': {
+                  whiteSpace: 'pre-line'
+                }
+              }}
+              onClose={() => setShowErrorAlert(false)}
+            >
+              {formError.includes('\n') ? (
+                <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                  {formError.split('\n').map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </Box>
+              ) : (
+                formError
+              )}
+            </Alert>
+          )}
+
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
-              <FormControl fullWidth>
+              <FormControl fullWidth error={showErrorAlert && !formData.apartmentOwnerId}>
                 <InputLabel>Apartment Owner</InputLabel>
                 <Select
                   value={formData.apartmentOwnerId}
                   label="Apartment Owner"
                   onChange={(e: SelectChangeEvent) => setFormData({ ...formData, apartmentOwnerId: e.target.value })}
+                  disabled={!!editingPayment}
                 >
                   {ownersData?.apartmentOwners.map((owner: ApartmentOwner) => (
                     <MenuItem key={owner.id} value={owner.id}>
@@ -432,9 +506,14 @@ const Payments: React.FC = () => {
                     </MenuItem>
                   ))}
                 </Select>
+                {showErrorAlert && !formData.apartmentOwnerId && (
+                  <Typography variant="caption" color="error">
+                    Please select an apartment owner
+                  </Typography>
+                )}
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -445,9 +524,13 @@ const Payments: React.FC = () => {
                 InputProps={{
                   startAdornment: <MoneyIcon sx={{ mr: 1 }} />,
                 }}
+                error={showErrorAlert && (!formData.amount || isNaN(parseFloat(formData.amount)))}
+                helperText={showErrorAlert && (!formData.amount || isNaN(parseFloat(formData.amount)))
+                  ? "Please enter a valid amount"
+                  : ""}
               />
             </Grid>
-            
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -458,9 +541,13 @@ const Payments: React.FC = () => {
                 InputProps={{
                   startAdornment: <CalendarIcon sx={{ mr: 1 }} />,
                 }}
+                error={showErrorAlert && (!formData.month || !isValidMonthFormat(formData.month))}
+                helperText={showErrorAlert && (!formData.month || !isValidMonthFormat(formData.month))
+                  ? "Please use YYYY-MM format"
+                  : ""}
               />
             </Grid>
-            
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -469,11 +556,15 @@ const Payments: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 multiline
                 rows={2}
+                error={showErrorAlert && !formData.description.trim()}
+                helperText={showErrorAlert && !formData.description.trim()
+                  ? "Description is required"
+                  : ""}
               />
             </Grid>
-            
+
             <Grid item xs={12}>
-              <FormControl fullWidth>
+              <FormControl fullWidth error={showErrorAlert && !formData.status}>
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={formData.status}
@@ -484,13 +575,18 @@ const Payments: React.FC = () => {
                   <MenuItem value="paid">Paid</MenuItem>
                   <MenuItem value="overdue">Overdue</MenuItem>
                 </Select>
+                {showErrorAlert && !formData.status && (
+                  <Typography variant="caption" color="error">
+                    Please select a status
+                  </Typography>
+                )}
               </FormControl>
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
+          <Button onClick={handleSubmit} variant="contained" color="primary">
             {editingPayment ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
@@ -499,4 +595,4 @@ const Payments: React.FC = () => {
   );
 };
 
-export default Payments; 
+export default Payments;
