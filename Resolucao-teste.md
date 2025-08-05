@@ -99,3 +99,14 @@ De acordo com o enunciado do desafio, foi solicitado implementar um **filtro por
 
 Agora é possível selecionar um prédio específico e visualizar apenas os moradores associados a ele, proporcionando uma navegação mais clara e organizada.
 
+<br>
+<hr>
+<br>
+
+## 🐳 Considerações Finais sobre Docker
+
+Durante o desafio, a parte que exigiu mais dedicação e aprendizagem foi a preparação e execução do ambiente com Docker. Inicialmente, encontrei dificuldades com a configuração do `docker-compose.yml` e dos `Dockerfile`s tanto do frontend como do backend, especialmente por ainda não ter muita experiência prática com Docker.
+
+No entanto, encarei isso como uma oportunidade de aprendizagem. Estudei a documentação oficial, analisei exemplos e testei diferentes abordagens até conseguir construir uma imagem funcional e que permitisse rodar toda a aplicação com sucesso. Também corrigi pequenos ajustes nos scripts de build e dependências para garantir que o ambiente estivesse replicável em qualquer máquina com Docker.
+
+Essa foi uma etapa que consumiu bastante tempo, mas que considero essencial para demonstrar meu comprometimento e responsabilidade em entregar um projeto pronto para execução. Acredito que esse tipo de esforço reflete bem meu perfil como profissional: resiliente, autodidata e focado em entregar soluções funcionais mesmo diante de barreiras técnicas.
